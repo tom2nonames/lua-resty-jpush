@@ -1,0 +1,10 @@
+return {
+  default = {
+    helper = "spec/spec_helper.lua",
+    lpath = "./lib/?.lua;./lib/?/init.lua",
+    root = ".",
+    tests = {
+      "spec/*_spec.lua"
+    }
+  }
+}

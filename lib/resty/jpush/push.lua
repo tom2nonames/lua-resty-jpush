@@ -12,6 +12,28 @@ function _M.new(client)
     return setmetatable(self, { __index = _M })
 end
 
+-- 获取推送标识（CID），用于幂等推送
+-- GET /v3/push/cid?count={count}
+function _M:get_cid(count)
+    local url = self.base_url .. "/cid"
+
+    local query_params = {}
+    if count then
+        query_params.count = count
+    end
+
+    local res, err = utils.request(self.client, url, {
+        method = "GET",
+        query = query_params,
+        headers = {
+            ["Authorization"] = self.client.auth_header,
+        },
+        ssl_verify = self.client.ssl_verify,
+    })
+
+    return utils.parse_response(res, err)
+end
+
 -- 验证推送对象
 local function validate_push_payload(payload)
     if not payload.platform then
@@ -27,7 +49,9 @@ local function validate_push_payload(payload)
 end
 
 -- 发送推送
-function _M:send(payload)
+-- POST /v3/push
+-- 支持通过 cid 参数传入推送标识（实现幂等推送）
+function _M:send(payload, opts)
     local ok, err_msg = validate_push_payload(payload)
     if not ok then
         return utils.build_error_response(
@@ -37,29 +61,37 @@ function _M:send(payload)
         )
     end
 
-    local httpc = self.client.httpc
-    local res, err = httpc:request_uri(self.base_url, {
+    local query_params = {}
+    if opts and opts.cid then
+        query_params.cid = opts.cid
+    end
+
+    local res, err = utils.request_with_debug(self.client, self.base_url, {
         method = "POST",
         body = cjson.encode(payload),
+        query = next(query_params) and query_params or nil,
         headers = {
             ["Content-Type"] = "application/json",
             ["Authorization"] = self.client.auth_header,
             ["User-Agent"] = "OpenResty-JPush-Client/1.0",
         },
         ssl_verify = self.client.ssl_verify,
-    })
-
-    -- 记录频率限制信息
-    if res and res.headers then
-        self.client.last_rate_limit = utils.extract_rate_limit_info(res.headers)
-    end
-
-    -- 记录调试日志
-    if self.client.debug and res then
-        ngx.log(ngx.INFO, "[JPush] Push response status: ", res.status)
-    end
+    }, "Push")
 
     return utils.parse_response(res, err)
+end
+
+-- 发送推送（带 CID 的便捷方法）
+-- 先获取 CID，再发送推送
+function _M:send_with_cid(payload, opts)
+    local cid_result = self:get_cid(1)
+    if not cid_result.success then
+        return cid_result
+    end
+
+    opts = opts or {}
+    opts.cid = cid_result.data.cidlist[1]
+    return self:send(payload, opts)
 end
 
 -- 便捷方法：向所有用户推送通知

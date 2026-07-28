@@ -1,4 +1,6 @@
 -- report.lua - 统计 API 模块
+-- 覆盖 JPush Report API V3 全部接口
+local cjson = require("cjson.safe")
 local utils = require("resty.jpush.utils")
 
 local _M = {}
@@ -11,9 +13,10 @@ function _M.new(client)
     return setmetatable(self, { __index = _M })
 end
 
--- 获取消息送达统计
+-- 获取消息送达统计（老接口）
+-- GET /v3/received?msg_ids=...
+-- 每批最多 100 个 msg_id
 function _M:get_received(msg_ids)
-    local httpc = self.client.httpc
     local url = self.base_url .. "/received"
 
     local msg_id_str
@@ -23,7 +26,7 @@ function _M:get_received(msg_ids)
         msg_id_str = tostring(msg_ids)
     end
 
-    local res, err = httpc:request_uri(url, {
+    local res, err = utils.request(self.client, url, {
         method = "GET",
         query = { msg_ids = msg_id_str },
         headers = {
@@ -36,23 +39,48 @@ function _M:get_received(msg_ids)
     return utils.parse_response(res, err)
 end
 
--- 获取消息详情（含送达状态）
-function _M:get_message_detail(msg_id, registration_ids)
-    local httpc = self.client.httpc
-    local url = self.base_url .. "/messages/" .. msg_id
+-- 获取消息送达统计详情（新接口，字段更丰富）
+-- GET /v3/received/detail?msg_ids=...
+-- 每批最多 100 个 msg_id
+function _M:get_received_detail(msg_ids)
+    local url = self.base_url .. "/received/detail"
 
-    local query_params = {}
-    if registration_ids then
-        if type(registration_ids) == "table" then
-            query_params.registration_ids = table.concat(registration_ids, ",")
-        else
-            query_params.registration_ids = tostring(registration_ids)
-        end
+    local msg_id_str
+    if type(msg_ids) == "table" then
+        msg_id_str = table.concat(msg_ids, ",")
+    else
+        msg_id_str = tostring(msg_ids)
     end
 
-    local res, err = httpc:request_uri(url, {
+    local res, err = utils.request(self.client, url, {
         method = "GET",
-        query = query_params,
+        query = { msg_ids = msg_id_str },
+        headers = {
+            ["Authorization"] = self.client.auth_header,
+            ["User-Agent"] = "OpenResty-JPush-Client/1.0",
+        },
+        ssl_verify = self.client.ssl_verify,
+    })
+
+    return utils.parse_response(res, err)
+end
+
+-- 获取消息统计详情（老接口）
+-- GET /v3/messages?msg_ids=...
+-- 提供针对一个 msg_id 的更多统计数据
+function _M:get_messages(msg_ids)
+    local url = self.base_url .. "/messages"
+
+    local msg_id_str
+    if type(msg_ids) == "table" then
+        msg_id_str = table.concat(msg_ids, ",")
+    else
+        msg_id_str = tostring(msg_ids)
+    end
+
+    local res, err = utils.request(self.client, url, {
+        method = "GET",
+        query = { msg_ids = msg_id_str },
         headers = {
             ["Authorization"] = self.client.auth_header,
         },
@@ -62,21 +90,66 @@ function _M:get_message_detail(msg_id, registration_ids)
     return utils.parse_response(res, err)
 end
 
--- 获取用户统计（在线状态、活跃度等）
-function _M:get_user_stat(registration_ids)
-    local httpc = self.client.httpc
-    local url = self.base_url .. "/users"
+-- 获取消息统计详情（新接口，VIP 专属，字段更丰富）
+-- GET /v3/messages/detail?msg_ids=...
+function _M:get_messages_detail(msg_ids)
+    local url = self.base_url .. "/messages/detail"
 
-    local reg_id_str
-    if type(registration_ids) == "table" then
-        reg_id_str = table.concat(registration_ids, ",")
+    local msg_id_str
+    if type(msg_ids) == "table" then
+        msg_id_str = table.concat(msg_ids, ",")
     else
-        reg_id_str = tostring(registration_ids)
+        msg_id_str = tostring(msg_ids)
     end
 
-    local res, err = httpc:request_uri(url, {
+    local res, err = utils.request(self.client, url, {
         method = "GET",
-        query = { registration_ids = reg_id_str },
+        query = { msg_ids = msg_id_str },
+        headers = {
+            ["Authorization"] = self.client.auth_header,
+        },
+        ssl_verify = self.client.ssl_verify,
+    })
+
+    return utils.parse_response(res, err)
+end
+
+-- 查询消息在某组设备上的送达状态
+-- POST /v3/status/message
+-- 建议仅作为排查工具使用
+function _M:get_message_status(msg_id, registration_ids)
+    local url = self.base_url .. "/status/message"
+
+    local body = {
+        msg_id = msg_id,
+        registration_ids = registration_ids,
+    }
+
+    local res, err = utils.request(self.client, url, {
+        method = "POST",
+        body = cjson.encode(body),
+        headers = {
+            ["Content-Type"] = "application/json",
+            ["Authorization"] = self.client.auth_header,
+        },
+        ssl_verify = self.client.ssl_verify,
+    })
+
+    return utils.parse_response(res, err)
+end
+
+-- 获取用户统计（在线状态、活跃度等）
+-- GET /v3/users?time_unit=DAY&start=2014-06-10&duration=3
+function _M:get_users(time_unit, start, duration)
+    local url = self.base_url .. "/users"
+
+    local res, err = utils.request(self.client, url, {
+        method = "GET",
+        query = {
+            time_unit = time_unit,
+            start = start,
+            duration = duration,
+        },
         headers = {
             ["Authorization"] = self.client.auth_header,
         },

@@ -5,16 +5,34 @@ local push = require("resty.jpush.push")
 local device = require("resty.jpush.device")
 local report = require("resty.jpush.report")
 local schedule = require("resty.jpush.schedule")
+local file_m = require("resty.jpush.file")
+local image = require("resty.jpush.image")
+local plan = require("resty.jpush.plan")
 
 local _M = {}
 
 -- 默认 API 地址
 _M.DEFAULT_BASE_URLS = {
-    push = "https://api.jpush.cn",
-    report = "https://report.jpush.cn",
-    device = "https://device.jpush.cn",
+    push     = "https://api.jpush.cn",
+    report   = "https://report.jpush.cn",
+    device   = "https://device.jpush.cn",
     schedule = "https://api.jpush.cn",  -- 定时任务复用推送 API 地址
 }
+
+-- 合并用户自定义 base_urls 与默认值
+local function merge_base_urls(custom)
+    if not custom then
+        return _M.DEFAULT_BASE_URLS
+    end
+    local merged = {}
+    for k, v in pairs(_M.DEFAULT_BASE_URLS) do
+        merged[k] = v
+    end
+    for k, v in pairs(custom) do
+        merged[k] = v
+    end
+    return merged
+end
 
 -- 客户端元表
 local client_mt = {}
@@ -33,7 +51,7 @@ function _M.new(config)
         app_key = app_key,
         master_secret = master_secret,
         auth_header = utils.generate_auth_header(app_key, master_secret),
-        base_urls = config.base_urls or _M.DEFAULT_BASE_URLS,
+        base_urls = merge_base_urls(config.base_urls),
         timeout = config.timeout or 10000,  -- 默认 10 秒
         ssl_verify = config.ssl_verify ~= false,  -- 默认开启 SSL 验证
         debug = config.debug or false,
@@ -44,10 +62,13 @@ function _M.new(config)
     client.httpc:set_timeout(client.timeout)
 
     -- 挂载子模块
-    client.push = push.new(client)
-    client.device = device.new(client)
-    client.report = report.new(client)
+    client.push     = push.new(client)
+    client.device   = device.new(client)
+    client.report   = report.new(client)
     client.schedule = schedule.new(client)
+    client.file     = file_m.new(client)
+    client.image    = image.new(client)
+    client.plan     = plan.new(client)
 
     return setmetatable(client, client_mt)
 end

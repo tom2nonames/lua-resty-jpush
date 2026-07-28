@@ -14,8 +14,6 @@ end
 
 -- 创建单次定时任务
 function _M:create_single(name, push_payload, trigger_time)
-    local httpc = self.client.httpc
-
     local payload = {
         name = name,
         enabled = true,
@@ -27,7 +25,7 @@ function _M:create_single(name, push_payload, trigger_time)
         push = push_payload,
     }
 
-    local res, err = httpc:request_uri(self.base_url, {
+    local res, err = utils.request(self.client, self.base_url, {
         method = "POST",
         body = cjson.encode(payload),
         headers = {
@@ -42,8 +40,6 @@ end
 
 -- 创建周期性定时任务
 function _M:create_periodical(name, push_payload, periodical_config)
-    local httpc = self.client.httpc
-
     local payload = {
         name = name,
         enabled = true,
@@ -53,7 +49,7 @@ function _M:create_periodical(name, push_payload, periodical_config)
         push = push_payload,
     }
 
-    local res, err = httpc:request_uri(self.base_url, {
+    local res, err = utils.request(self.client, self.base_url, {
         method = "POST",
         body = cjson.encode(payload),
         headers = {
@@ -68,10 +64,9 @@ end
 
 -- 获取定时任务列表
 function _M:get_list(page)
-    local httpc = self.client.httpc
     local query_params = page and { page = page } or {}
 
-    local res, err = httpc:request_uri(self.base_url, {
+    local res, err = utils.request(self.client, self.base_url, {
         method = "GET",
         query = query_params,
         headers = {
@@ -85,10 +80,9 @@ end
 
 -- 获取指定定时任务详情
 function _M:get(schedule_id)
-    local httpc = self.client.httpc
     local url = self.base_url .. "/" .. schedule_id
 
-    local res, err = httpc:request_uri(url, {
+    local res, err = utils.request(self.client, url, {
         method = "GET",
         headers = {
             ["Authorization"] = self.client.auth_header,
@@ -101,10 +95,9 @@ end
 
 -- 更新定时任务
 function _M:update(schedule_id, update_data)
-    local httpc = self.client.httpc
     local url = self.base_url .. "/" .. schedule_id
 
-    local res, err = httpc:request_uri(url, {
+    local res, err = utils.request(self.client, url, {
         method = "PUT",
         body = cjson.encode(update_data),
         headers = {
@@ -119,10 +112,9 @@ end
 
 -- 删除定时任务
 function _M:delete(schedule_id)
-    local httpc = self.client.httpc
     local url = self.base_url .. "/" .. schedule_id
 
-    local res, err = httpc:request_uri(url, {
+    local res, err = utils.request(self.client, url, {
         method = "DELETE",
         headers = {
             ["Authorization"] = self.client.auth_header,
