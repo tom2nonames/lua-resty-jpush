@@ -1,7 +1,10 @@
+
+rockspec_format = "3.0"
 package = "lua-resty-jpush"
 version = "1.1.0-1"
 source = {
-   url = "git://github.com/tom2nonames/lua-resty-jpush"
+     url = "git+https://github.com/tom2nonames/lua-resty-jpush.git"
+
 }
 description = {
    summary = "JPush (极光推送) REST API client for OpenResty",
@@ -21,14 +24,14 @@ dependencies = {
 build = {
    type = "builtin",
    modules = {
-      ["jpush"]            = "lib/resty/jpush/init.lua",
-      ["jpush.utils"]      = "lib/resty/jpush/utils.lua",
-      ["jpush.push"]       = "lib/resty/jpush/push.lua",
-      ["jpush.device"]     = "lib/resty/jpush/device.lua",
-      ["jpush.report"]     = "lib/resty/jpush/report.lua",
-      ["jpush.schedule"]   = "lib/resty/jpush/schedule.lua",
-      ["jpush.file"]       = "lib/resty/jpush/file.lua",
-      ["jpush.image"]      = "lib/resty/jpush/image.lua",
-      ["jpush.plan"]       = "lib/resty/jpush/plan.lua",
+      ["resty.jpush"]            = "lib/resty/jpush/init.lua",
+      ["resty.jpush.utils"]      = "lib/resty/jpush/utils.lua",
+      ["resty.jpush.push"]       = "lib/resty/jpush/push.lua",
+      ["resty.jpush.device"]     = "lib/resty/jpush/device.lua",
+      ["resty.jpush.report"]     = "lib/resty/jpush/report.lua",
+      ["resty.jpush.schedule"]   = "lib/resty/jpush/schedule.lua",
+      ["resty.jpush.file"]       = "lib/resty/jpush/file.lua",
+      ["resty.jpush.image"]      = "lib/resty/jpush/image.lua",
+      ["resty.jpush.plan"]       = "lib/resty/jpush/plan.lua",
    }
 }
